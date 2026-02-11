@@ -15,14 +15,6 @@ $admin_email = $_SESSION['admin_email'];
 $admin_name = $_SESSION['admin_name'];
 $admin_role = $_SESSION['admin_role'];
 
-// Handle language switching
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'switch_language') {
-    $language = $_POST['language'];
-    $_SESSION['dashboard_language'] = $language;
-    echo json_encode(['success' => true, 'language' => $language]);
-    exit;
-}
-
 // Handle form submissions
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (isset($_POST['action'])) {
@@ -31,17 +23,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $current_password = $_POST['current_password'];
                 $new_password = $_POST['new_password'];
                 $confirm_password = $_POST['confirm_password'];
-                
-                // Get current password from database
+
                 $sql = "SELECT password FROM admin_users WHERE id = $admin_id";
                 $result = $conn->query($sql);
                 $admin = $result->fetch_assoc();
-                
+
                 if (password_verify($current_password, $admin['password'])) {
                     if ($new_password === $confirm_password) {
                         $hashed_password = password_hash($new_password, PASSWORD_DEFAULT);
                         $sql = "UPDATE admin_users SET password = '$hashed_password' WHERE id = $admin_id";
-                        
+
                         if ($conn->query($sql)) {
                             $_SESSION['success_message'] = 'Password changed successfully!';
                         } else {
@@ -54,51 +45,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $_SESSION['error_message'] = 'Current password is incorrect';
                 }
                 break;
-                
+
             case 'create_admin':
                 $username = $conn->real_escape_string($_POST['username']);
                 $email = $conn->real_escape_string($_POST['email']);
                 $full_name = $conn->real_escape_string($_POST['full_name']);
                 $password = password_hash($_POST['password'], PASSWORD_DEFAULT);
                 $role = $conn->real_escape_string($_POST['role']);
-                
-                $sql = "INSERT INTO admin_users (username, email, full_name, password, role, created_by) 
+
+                $sql = "INSERT INTO admin_users (username, email, full_name, password, role, created_by)
                         VALUES ('$username', '$email', '$full_name', '$password', '$role', '$admin_username')";
-                
+
                 if ($conn->query($sql)) {
                     $_SESSION['success_message'] = 'Admin user created successfully!';
                 } else {
                     $_SESSION['error_message'] = 'Error creating admin user: ' . $conn->error;
                 }
                 break;
-                
+
             case 'fetch_opinion':
-                // Fetch opinion data for modal
                 if (isset($_POST['opinion_id']) && is_numeric($_POST['opinion_id'])) {
                     $opinion_id = intval($_POST['opinion_id']);
                     $sql = "SELECT * FROM opinions WHERE id = $opinion_id";
                     $result = $conn->query($sql);
-                    
+
                     if ($result->num_rows > 0) {
                         $opinion = $result->fetch_assoc();
-                        
-                        // Format date
                         $submission_date = date('d M Y, h:i A', strtotime($opinion['submission_date']));
-                        
-                        // Get language name
-                        $language_names = [
-                            'en' => 'English',
-                            'hi' => 'हिन्दी',
-                            'es' => 'Español',
-                            'fr' => 'Français',
-                            'de' => 'Deutsch',
-                            'ja' => '日本語'
-                        ];
-                        $language = isset($language_names[$opinion['language']]) ? 
-                                   $language_names[$opinion['language']] : 
-                                   ucfirst($opinion['language']);
-                        
-                        // Return opinion data as JSON
+
                         echo json_encode([
                             'success' => true,
                             'data' => [
@@ -108,7 +82,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 'phone' => htmlspecialchars($opinion['phone'] ?: 'N/A'),
                                 'category' => htmlspecialchars($opinion['category'] ?: 'General'),
                                 'opinion' => htmlspecialchars($opinion['opinion']),
-                                'language' => $language,
+                                'language' => ucfirst($opinion['language']),
                                 'submission_date' => $submission_date,
                                 'status' => ucfirst($opinion['status'])
                             ]
@@ -130,16 +104,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 // Get statistics
 $members_count = $conn->query("SELECT COUNT(*) as count FROM members")->fetch_assoc()['count'];
 $opinions_count = $conn->query("SELECT COUNT(*) as count FROM opinions")->fetch_assoc()['count'];
-
-// Calculate growth percentage (dummy calculation)
 $growth_percentage = rand(5, 25);
 
-// Get members for table (with pagination and search)
+// Members pagination and search
 $members_page = isset($_GET['members_page']) ? intval($_GET['members_page']) : 1;
-$members_per_page = 12; // Changed from 6 to 12
+$members_per_page = 12;
 $members_offset = ($members_page - 1) * $members_per_page;
 
-// Search functionality for members
 $members_search = isset($_GET['members_search']) ? $conn->real_escape_string($_GET['members_search']) : '';
 $members_where = '';
 if (!empty($members_search)) {
@@ -149,17 +120,15 @@ if (!empty($members_search)) {
 $members_query = "SELECT * FROM members $members_where ORDER BY join_date DESC LIMIT $members_offset, $members_per_page";
 $members_result = $conn->query($members_query);
 
-// Get total members count with search
 $total_members_query = "SELECT COUNT(*) as count FROM members $members_where";
 $total_members_count = $conn->query($total_members_query)->fetch_assoc()['count'];
 $total_members_pages = ceil($total_members_count / $members_per_page);
 
-// Get opinions for table (with pagination and search)
+// Opinions pagination and search
 $opinions_page = isset($_GET['opinions_page']) ? intval($_GET['opinions_page']) : 1;
-$opinions_per_page = 12; // Changed from 6 to 12
+$opinions_per_page = 12;
 $opinions_offset = ($opinions_page - 1) * $opinions_per_page;
 
-// Search functionality for opinions
 $opinions_search = isset($_GET['opinions_search']) ? $conn->real_escape_string($_GET['opinions_search']) : '';
 $opinions_where = '';
 if (!empty($opinions_search)) {
@@ -169,16 +138,12 @@ if (!empty($opinions_search)) {
 $opinions_query = "SELECT * FROM opinions $opinions_where ORDER BY submission_date DESC LIMIT $opinions_offset, $opinions_per_page";
 $opinions_result = $conn->query($opinions_query);
 
-// Get total opinions count with search
 $total_opinions_query = "SELECT COUNT(*) as count FROM opinions $opinions_where";
 $total_opinions_count = $conn->query($total_opinions_query)->fetch_assoc()['count'];
 $total_opinions_pages = ceil($total_opinions_count / $opinions_per_page);
 
 // Get admin users
 $admin_users_result = $conn->query("SELECT * FROM admin_users ORDER BY created_date DESC");
-
-// Get current language from session or default to English
-$current_language = isset($_SESSION['dashboard_language']) ? $_SESSION['dashboard_language'] : 'en';
 ?>
 
 <!DOCTYPE html>
@@ -187,17 +152,12 @@ $current_language = isset($_SESSION['dashboard_language']) ? $_SESSION['dashboar
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Dashboard - Sarvatantra</title>
-    <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Font Awesome for icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    
-    <!-- Custom CSS -->
     <link rel="stylesheet" href="assets/css/dashboard.css">
 </head>
-<body data-language="<?php echo $current_language; ?>">
+<body>
     <!-- Alert Message Container -->
     <div id="alertContainer">
         <?php if (isset($_SESSION['success_message'])): ?>
@@ -209,7 +169,7 @@ $current_language = isset($_SESSION['dashboard_language']) ? $_SESSION['dashboar
             </div>
             <?php unset($_SESSION['success_message']); ?>
         <?php endif; ?>
-        
+
         <?php if (isset($_SESSION['error_message'])): ?>
             <div class="alert alert-danger alert-message show">
                 <div class="d-flex justify-content-between align-items-center">
@@ -220,167 +180,136 @@ $current_language = isset($_SESSION['dashboard_language']) ? $_SESSION['dashboar
             <?php unset($_SESSION['error_message']); ?>
         <?php endif; ?>
     </div>
-    
+
     <!-- Mobile Menu Toggle -->
     <div class="mobile-menu-toggle" id="mobileMenuToggle">
         <i class="fas fa-bars"></i>
     </div>
-    
+
     <!-- Sidebar -->
     <div class="sidebar" id="sidebar">
         <div class="sidebar-header">
             <a href="index.php" class="logo">
                 <i class="fas fa-democrat"></i>
-                <span class="translatable" data-key="logo">सर्वतंत्र</span>
+                <span>Sarvatantra</span>
             </a>
         </div>
-        
+
         <ul class="nav-links">
             <li><a href="dashboard.php" class="<?php echo (!isset($_GET['section']) || $_GET['section'] == 'dashboard') ? 'active' : ''; ?>">
                 <i class="fas fa-tachometer-alt"></i>
-                <span class="translatable" data-key="dashboard">Dashboard</span>
+                <span>Dashboard</span>
             </a></li>
             <li><a href="dashboard.php?section=members" class="<?php echo (isset($_GET['section']) && $_GET['section'] == 'members') ? 'active' : ''; ?>">
                 <i class="fas fa-users"></i>
-                <span class="translatable" data-key="members">Members</span>
+                <span>Members</span>
             </a></li>
             <li><a href="dashboard.php?section=opinions" class="<?php echo (isset($_GET['section']) && $_GET['section'] == 'opinions') ? 'active' : ''; ?>">
                 <i class="far fa-comment-dots"></i>
-                <span class="translatable" data-key="opinions">Opinions</span>
+                <span>Opinions</span>
             </a></li>
             <li><a href="dashboard.php?section=admin_users" class="<?php echo (isset($_GET['section']) && $_GET['section'] == 'admin_users') ? 'active' : ''; ?>">
                 <i class="fas fa-user-shield"></i>
-                <span class="translatable" data-key="admin_users">Admin Users</span>
+                <span>Admin Users</span>
             </a></li>
             <li><a href="#" data-bs-toggle="modal" data-bs-target="#changePasswordModal">
                 <i class="fas fa-key"></i>
-                <span class="translatable" data-key="change_password">Change Password</span>
+                <span>Change Password</span>
             </a></li>
         </ul>
-        
+
         <div class="logout-btn" id="logoutBtn" onclick="window.location.href='logout.php'">
             <i class="fas fa-sign-out-alt"></i>
-            <span class="translatable" data-key="logout">Logout</span>
+            <span>Logout</span>
         </div>
     </div>
-    
+
     <!-- Main Content -->
     <div class="main-content">
         <!-- Header -->
         <div class="header fade-in">
-            <h1 id="pageTitle">
-                <?php 
+            <h1>
+                <?php
                 $section = isset($_GET['section']) ? $_GET['section'] : 'dashboard';
                 switch($section) {
-                    case 'members':
-                        echo '<span class="translatable" data-key="members_title">Members</span>';
-                        break;
-                    case 'opinions':
-                        echo '<span class="translatable" data-key="opinions_title">Opinions</span>';
-                        break;
-                    case 'admin_users':
-                        echo '<span class="translatable" data-key="admin_users_title">Admin Users</span>';
-                        break;
-                    default:
-                        echo '<span class="translatable" data-key="dashboard_title">Dashboard</span>';
-                        break;
+                    case 'members': echo 'Members'; break;
+                    case 'opinions': echo 'Opinions'; break;
+                    case 'admin_users': echo 'Admin Users'; break;
+                    default: echo 'Dashboard'; break;
                 }
                 ?>
             </h1>
             <div class="user-info">
                 <div class="user-avatar">
-                    <span id="userInitial"><?php echo strtoupper(substr($admin_name, 0, 1)); ?></span>
+                    <span><?php echo strtoupper(substr($admin_name, 0, 1)); ?></span>
                 </div>
                 <div>
-                    <div style="font-weight: 700;" id="userName"><?php echo $admin_name; ?></div>
-                    <div style="font-size: 0.85rem; color: #666;" id="userEmail"><?php echo $admin_email; ?></div>
+                    <div style="font-weight: 700;"><?php echo $admin_name; ?></div>
+                    <div style="font-size: 0.85rem; color: #666;"><?php echo $admin_email; ?></div>
                 </div>
             </div>
         </div>
-        
+
         <?php
         $section = isset($_GET['section']) ? $_GET['section'] : 'dashboard';
-        
+
         if ($section === 'dashboard'): ?>
         <!-- Dashboard Stats -->
-        <div class="stats-cards fade-in" id="dashboardStats">
+        <div class="stats-cards fade-in">
             <div class="stat-card members">
-                <div class="icon">
-                    <i class="fas fa-users"></i>
-                </div>
-                <h3 class="translatable" data-key="total_members">Total Members</h3>
-                <div class="value" id="totalMembers"><?php echo $members_count; ?></div>
+                <div class="icon"><i class="fas fa-users"></i></div>
+                <h3>Total Members</h3>
+                <div class="value"><?php echo $members_count; ?></div>
             </div>
             <div class="stat-card opinions">
-                <div class="icon">
-                    <i class="far fa-comment-dots"></i>
-                </div>
-                <h3 class="translatable" data-key="total_opinions">Total Opinions</h3>
-                <div class="value" id="totalOpinions"><?php echo $opinions_count; ?></div>
+                <div class="icon"><i class="far fa-comment-dots"></i></div>
+                <h3>Total Opinions</h3>
+                <div class="value"><?php echo $opinions_count; ?></div>
             </div>
             <div class="stat-card growth">
-                <div class="icon">
-                    <i class="fas fa-chart-line"></i>
-                </div>
-                <h3 class="translatable" data-key="growth_month">Growth This Month</h3>
-                <div class="value" id="growthValue">+<?php echo $growth_percentage; ?>%</div>
+                <div class="icon"><i class="fas fa-chart-line"></i></div>
+                <h3>Growth This Month</h3>
+                <div class="value">+<?php echo $growth_percentage; ?>%</div>
             </div>
         </div>
-        
-        <!-- Members Section -->
-        <div class="content-section fade-in" id="membersSection">
+
+        <!-- Members Section on Dashboard -->
+        <div class="content-section fade-in">
             <div class="section-header">
-                <h2 class="section-title"><i class="fas fa-users"></i> <span class="translatable" data-key="all_members">All Members</span></h2>
-                <div class="section-subtitle" id="membersCount"><span id="membersCountValue"><?php echo $members_count; ?></span> <span class="translatable" data-key="members_found">members found</span></div>
+                <h2 class="section-title"><i class="fas fa-users"></i> All Members</h2>
+                <div class="section-subtitle"><?php echo $members_count; ?> members found</div>
             </div>
-            
-            <!-- Search Box for Members -->
+
             <div class="search-container">
                 <form method="GET" action="dashboard.php" class="search-box">
                     <input type="hidden" name="section" value="members">
-                    <input type="text" 
-                           class="search-input" 
-                           name="members_search" 
-                           placeholder="<?php echo htmlspecialchars(translatePlaceholder('Search members by name, email or phone...', $current_language)); ?>"
-                           value="<?php echo isset($_GET['members_search']) ? htmlspecialchars($_GET['members_search']) : ''; ?>">
-                    <button type="submit" class="search-btn">
-                        <i class="fas fa-search"></i>
-                        <span class="translatable" data-key="search">Search</span>
-                    </button>
+                    <input type="text" class="search-input" name="members_search" placeholder="Search members by name, email or phone..." value="<?php echo isset($_GET['members_search']) ? htmlspecialchars($_GET['members_search']) : ''; ?>">
+                    <button type="submit" class="search-btn"><i class="fas fa-search"></i> Search</button>
                     <?php if (!empty($members_search)): ?>
-                    <a href="dashboard.php?section=members" class="clear-search-btn">
-                        <i class="fas fa-times"></i>
-                        <span class="translatable" data-key="clear">Clear</span>
-                    </a>
+                    <a href="dashboard.php?section=members" class="clear-search-btn"><i class="fas fa-times"></i> Clear</a>
                     <?php endif; ?>
                 </form>
             </div>
-            
+
             <?php if (!empty($members_search)): ?>
             <div class="search-results-info fade-in">
-                <div>
-                    <span class="translatable" data-key="search_results_for">Search results for:</span>
-                    <span class="search-term">"<?php echo htmlspecialchars($members_search); ?>"</span>
-                    <span class="translatable" data-key="found">found</span>
-                    <strong><?php echo $total_members_count; ?></strong>
-                    <span class="translatable" data-key="results">results</span>
-                </div>
+                <div>Search results for: <span class="search-term">"<?php echo htmlspecialchars($members_search); ?>"</span> - found <strong><?php echo $total_members_count; ?></strong> results</div>
             </div>
             <?php endif; ?>
-            
+
             <div class="table-container">
                 <table class="data-table">
                     <thead>
                         <tr>
-                            <th class="translatable" data-key="sr_no">SR. NO.</th>
-                            <th class="translatable" data-key="name">NAME</th>
-                            <th class="translatable" data-key="email">EMAIL</th>
-                            <th class="translatable" data-key="phone">PHONE</th>
-                            <th class="translatable" data-key="join_date">JOIN DATE</th>
-                            <th class="translatable" data-key="gender">GENDER</th>
+                            <th>SR. NO.</th>
+                            <th>NAME</th>
+                            <th>EMAIL</th>
+                            <th>PHONE</th>
+                            <th>JOIN DATE</th>
+                            <th>GENDER</th>
                         </tr>
                     </thead>
-                    <tbody id="membersTableBody">
+                    <tbody>
                         <?php
                         $count = 1;
                         while ($member = $members_result->fetch_assoc()):
@@ -393,22 +322,14 @@ $current_language = isset($_SESSION['dashboard_language']) ? $_SESSION['dashboar
                             <td><?php echo date('d M Y', strtotime($member['join_date'])); ?></td>
                             <td><?php echo ucfirst($member['gender']); ?></td>
                         </tr>
-                        <?php 
-                        $count++;
-                        endwhile; 
-                        
-                        if ($members_result->num_rows == 0):
-                        ?>
+                        <?php $count++; endwhile;
+                        if ($members_result->num_rows == 0): ?>
                         <tr>
                             <td colspan="6" style="text-align: center; padding: 40px; color: #666;">
                                 <i class="fas fa-users fa-2x mb-3" style="color: #ddd;"></i>
-                                <div class="translatable" data-key="no_members_found">No members found</div>
+                                <div>No members found</div>
                                 <?php if (!empty($members_search)): ?>
-                                <div class="mt-2">
-                                    <a href="dashboard.php?section=members" class="translatable" data-key="clear_search_and_show_all" style="color: var(--accent-teal); text-decoration: none;">
-                                        Clear search and show all members
-                                    </a>
-                                </div>
+                                <div class="mt-2"><a href="dashboard.php?section=members" style="color: var(--accent-teal); text-decoration: none;">Clear search and show all members</a></div>
                                 <?php endif; ?>
                             </td>
                         </tr>
@@ -416,93 +337,58 @@ $current_language = isset($_SESSION['dashboard_language']) ? $_SESSION['dashboar
                     </tbody>
                 </table>
             </div>
-            
+
             <div class="pagination-container">
-                <div class="pagination-info" id="membersPaginationInfo">
-                    <span class="translatable" data-key="showing">Showing</span> <?php echo min($total_members_count, $members_offset + 1); ?>-<?php echo min($total_members_count, $members_offset + $members_per_page); ?> <span class="translatable" data-key="of">of</span> <?php echo $total_members_count; ?>
-                </div>
+                <div class="pagination-info">Showing <?php echo min($total_members_count, $members_offset + 1); ?>-<?php echo min($total_members_count, $members_offset + $members_per_page); ?> of <?php echo $total_members_count; ?></div>
                 <div class="pagination-buttons">
-                    <a class="page-btn translatable" data-key="previous" <?php echo $members_page <= 1 ? 'disabled' : ''; ?> 
-                       href="dashboard.php?section=members&members_page=<?php echo $members_page - 1; ?><?php echo !empty($members_search) ? '&members_search=' . urlencode($members_search) : ''; ?>" 
-                       <?php echo $members_page <= 1 ? 'disabled' : ''; ?>>
-                        Previous
-                    </a>
-                    
+                    <a class="page-btn" <?php echo $members_page <= 1 ? 'disabled' : ''; ?> href="dashboard.php?section=members&members_page=<?php echo $members_page - 1; ?><?php echo !empty($members_search) ? '&members_search=' . urlencode($members_search) : ''; ?>">Previous</a>
                     <?php for ($i = 1; $i <= min(4, $total_members_pages); $i++): ?>
-                    <a class="page-btn <?php echo $members_page == $i ? 'active' : ''; ?>" 
-                       href="dashboard.php?section=members&members_page=<?php echo $i; ?><?php echo !empty($members_search) ? '&members_search=' . urlencode($members_search) : ''; ?>">
-                        <?php echo $i; ?>
-                    </a>
+                    <a class="page-btn <?php echo $members_page == $i ? 'active' : ''; ?>" href="dashboard.php?section=members&members_page=<?php echo $i; ?><?php echo !empty($members_search) ? '&members_search=' . urlencode($members_search) : ''; ?>"><?php echo $i; ?></a>
                     <?php endfor; ?>
-                    
-                    <?php if ($total_members_pages > 4): ?>
-                    <span class="page-btn disabled">...</span>
-                    <?php endif; ?>
-                    
-                    <a class="page-btn translatable" data-key="next" <?php echo $members_page >= $total_members_pages ? 'disabled' : ''; ?> 
-                       href="dashboard.php?section=members&members_page=<?php echo $members_page + 1; ?><?php echo !empty($members_search) ? '&members_search=' . urlencode($members_search) : ''; ?>" 
-                       <?php echo $members_page >= $total_members_pages ? 'disabled' : ''; ?>>
-                        Next
-                    </a>
+                    <?php if ($total_members_pages > 4): ?><span class="page-btn disabled">...</span><?php endif; ?>
+                    <a class="page-btn" <?php echo $members_page >= $total_members_pages ? 'disabled' : ''; ?> href="dashboard.php?section=members&members_page=<?php echo $members_page + 1; ?><?php echo !empty($members_search) ? '&members_search=' . urlencode($members_search) : ''; ?>">Next</a>
                 </div>
             </div>
         </div>
-        
+
         <?php elseif ($section === 'members'): ?>
         <!-- Members Section -->
-        <div class="content-section fade-in" id="membersSection">
+        <div class="content-section fade-in">
             <div class="section-header">
-                <h2 class="section-title"><i class="fas fa-users"></i> <span class="translatable" data-key="all_members">All Members</span></h2>
-                <div class="section-subtitle" id="membersCount"><span id="membersCountValue"><?php echo $total_members_count; ?></span> <span class="translatable" data-key="members_found">members found</span></div>
+                <h2 class="section-title"><i class="fas fa-users"></i> All Members</h2>
+                <div class="section-subtitle"><?php echo $total_members_count; ?> members found</div>
             </div>
-            
-            <!-- Search Box for Members -->
+
             <div class="search-container">
                 <form method="GET" action="dashboard.php" class="search-box">
                     <input type="hidden" name="section" value="members">
-                    <input type="text" 
-                           class="search-input" 
-                           name="members_search" 
-                           placeholder="<?php echo htmlspecialchars(translatePlaceholder('Search members by name, email or phone...', $current_language)); ?>"
-                           value="<?php echo isset($_GET['members_search']) ? htmlspecialchars($_GET['members_search']) : ''; ?>">
-                    <button type="submit" class="search-btn">
-                        <i class="fas fa-search"></i>
-                        <span class="translatable" data-key="search">Search</span>
-                    </button>
+                    <input type="text" class="search-input" name="members_search" placeholder="Search members by name, email or phone..." value="<?php echo isset($_GET['members_search']) ? htmlspecialchars($_GET['members_search']) : ''; ?>">
+                    <button type="submit" class="search-btn"><i class="fas fa-search"></i> Search</button>
                     <?php if (!empty($members_search)): ?>
-                    <a href="dashboard.php?section=members" class="clear-search-btn">
-                        <i class="fas fa-times"></i>
-                        <span class="translatable" data-key="clear">Clear</span>
-                    </a>
+                    <a href="dashboard.php?section=members" class="clear-search-btn"><i class="fas fa-times"></i> Clear</a>
                     <?php endif; ?>
                 </form>
             </div>
-            
+
             <?php if (!empty($members_search)): ?>
             <div class="search-results-info fade-in">
-                <div>
-                    <span class="translatable" data-key="search_results_for">Search results for:</span>
-                    <span class="search-term">"<?php echo htmlspecialchars($members_search); ?>"</span>
-                    <span class="translatable" data-key="found">found</span>
-                    <strong><?php echo $total_members_count; ?></strong>
-                    <span class="translatable" data-key="results">results</span>
-                </div>
+                <div>Search results for: <span class="search-term">"<?php echo htmlspecialchars($members_search); ?>"</span> - found <strong><?php echo $total_members_count; ?></strong> results</div>
             </div>
             <?php endif; ?>
-            
+
             <div class="table-container">
                 <table class="data-table">
                     <thead>
                         <tr>
-                            <th class="translatable" data-key="sr_no">SR. NO.</th>
-                            <th class="translatable" data-key="name">NAME</th>
-                            <th class="translatable" data-key="email">EMAIL</th>
-                            <th class="translatable" data-key="phone">PHONE</th>
-                            <th class="translatable" data-key="join_date">JOIN DATE</th>
-                            <th class="translatable" data-key="gender">GENDER</th>
+                            <th>SR. NO.</th>
+                            <th>NAME</th>
+                            <th>EMAIL</th>
+                            <th>PHONE</th>
+                            <th>JOIN DATE</th>
+                            <th>GENDER</th>
                         </tr>
                     </thead>
-                    <tbody id="membersTableBody">
+                    <tbody>
                         <?php
                         $count = 1;
                         while ($member = $members_result->fetch_assoc()):
@@ -515,22 +401,14 @@ $current_language = isset($_SESSION['dashboard_language']) ? $_SESSION['dashboar
                             <td><?php echo date('d M Y', strtotime($member['join_date'])); ?></td>
                             <td><?php echo ucfirst($member['gender']); ?></td>
                         </tr>
-                        <?php 
-                        $count++;
-                        endwhile; 
-                        
-                        if ($members_result->num_rows == 0):
-                        ?>
+                        <?php $count++; endwhile;
+                        if ($members_result->num_rows == 0): ?>
                         <tr>
                             <td colspan="6" style="text-align: center; padding: 40px; color: #666;">
                                 <i class="fas fa-users fa-2x mb-3" style="color: #ddd;"></i>
-                                <div class="translatable" data-key="no_members_found">No members found</div>
+                                <div>No members found</div>
                                 <?php if (!empty($members_search)): ?>
-                                <div class="mt-2">
-                                    <a href="dashboard.php?section=members" class="translatable" data-key="clear_search_and_show_all" style="color: var(--accent-teal); text-decoration: none;">
-                                        Clear search and show all members
-                                    </a>
-                                </div>
+                                <div class="mt-2"><a href="dashboard.php?section=members" style="color: var(--accent-teal); text-decoration: none;">Clear search and show all members</a></div>
                                 <?php endif; ?>
                             </td>
                         </tr>
@@ -538,94 +416,59 @@ $current_language = isset($_SESSION['dashboard_language']) ? $_SESSION['dashboar
                     </tbody>
                 </table>
             </div>
-            
+
             <div class="pagination-container">
-                <div class="pagination-info" id="membersPaginationInfo">
-                    <span class="translatable" data-key="showing">Showing</span> <?php echo min($total_members_count, $members_offset + 1); ?>-<?php echo min($total_members_count, $members_offset + $members_per_page); ?> <span class="translatable" data-key="of">of</span> <?php echo $total_members_count; ?>
-                </div>
+                <div class="pagination-info">Showing <?php echo min($total_members_count, $members_offset + 1); ?>-<?php echo min($total_members_count, $members_offset + $members_per_page); ?> of <?php echo $total_members_count; ?></div>
                 <div class="pagination-buttons">
-                    <a class="page-btn translatable" data-key="previous" <?php echo $members_page <= 1 ? 'disabled' : ''; ?> 
-                       href="dashboard.php?section=members&members_page=<?php echo $members_page - 1; ?><?php echo !empty($members_search) ? '&members_search=' . urlencode($members_search) : ''; ?>" 
-                       <?php echo $members_page <= 1 ? 'disabled' : ''; ?>>
-                        Previous
-                    </a>
-                    
+                    <a class="page-btn" <?php echo $members_page <= 1 ? 'disabled' : ''; ?> href="dashboard.php?section=members&members_page=<?php echo $members_page - 1; ?><?php echo !empty($members_search) ? '&members_search=' . urlencode($members_search) : ''; ?>">Previous</a>
                     <?php for ($i = 1; $i <= min(4, $total_members_pages); $i++): ?>
-                    <a class="page-btn <?php echo $members_page == $i ? 'active' : ''; ?>" 
-                       href="dashboard.php?section=members&members_page=<?php echo $i; ?><?php echo !empty($members_search) ? '&members_search=' . urlencode($members_search) : ''; ?>">
-                        <?php echo $i; ?>
-                    </a>
+                    <a class="page-btn <?php echo $members_page == $i ? 'active' : ''; ?>" href="dashboard.php?section=members&members_page=<?php echo $i; ?><?php echo !empty($members_search) ? '&members_search=' . urlencode($members_search) : ''; ?>"><?php echo $i; ?></a>
                     <?php endfor; ?>
-                    
-                    <?php if ($total_members_pages > 4): ?>
-                    <span class="page-btn disabled">...</span>
-                    <?php endif; ?>
-                    
-                    <a class="page-btn translatable" data-key="next" <?php echo $members_page >= $total_members_pages ? 'disabled' : ''; ?> 
-                       href="dashboard.php?section=members&members_page=<?php echo $members_page + 1; ?><?php echo !empty($members_search) ? '&members_search=' . urlencode($members_search) : ''; ?>" 
-                       <?php echo $members_page >= $total_members_pages ? 'disabled' : ''; ?>>
-                        Next
-                    </a>
+                    <?php if ($total_members_pages > 4): ?><span class="page-btn disabled">...</span><?php endif; ?>
+                    <a class="page-btn" <?php echo $members_page >= $total_members_pages ? 'disabled' : ''; ?> href="dashboard.php?section=members&members_page=<?php echo $members_page + 1; ?><?php echo !empty($members_search) ? '&members_search=' . urlencode($members_search) : ''; ?>">Next</a>
                 </div>
             </div>
         </div>
-        
+
         <?php elseif ($section === 'opinions'): ?>
         <!-- Opinions Section -->
-        <div class="content-section fade-in" id="opinionsSection">
+        <div class="content-section fade-in">
             <div class="section-header">
-                <h2 class="section-title"><i class="far fa-comment-dots"></i> <span class="translatable" data-key="opinions">Opinions</span></h2>
-                <div class="section-subtitle" id="opinionsCount"><span id="opinionsCountValue"><?php echo $total_opinions_count; ?></span> <span class="translatable" data-key="opinions_found">opinions found</span></div>
+                <h2 class="section-title"><i class="far fa-comment-dots"></i> Opinions</h2>
+                <div class="section-subtitle"><?php echo $total_opinions_count; ?> opinions found</div>
             </div>
-            
-            <!-- Search Box for Opinions -->
+
             <div class="search-container">
                 <form method="GET" action="dashboard.php" class="search-box">
                     <input type="hidden" name="section" value="opinions">
-                    <input type="text" 
-                           class="search-input" 
-                           name="opinions_search" 
-                           placeholder="<?php echo htmlspecialchars(translatePlaceholder('Search opinions by name, email, phone, category or content...', $current_language)); ?>"
-                           value="<?php echo isset($_GET['opinions_search']) ? htmlspecialchars($_GET['opinions_search']) : ''; ?>">
-                    <button type="submit" class="search-btn">
-                        <i class="fas fa-search"></i>
-                        <span class="translatable" data-key="search">Search</span>
-                    </button>
+                    <input type="text" class="search-input" name="opinions_search" placeholder="Search opinions by name, email, phone, category or content..." value="<?php echo isset($_GET['opinions_search']) ? htmlspecialchars($_GET['opinions_search']) : ''; ?>">
+                    <button type="submit" class="search-btn"><i class="fas fa-search"></i> Search</button>
                     <?php if (!empty($opinions_search)): ?>
-                    <a href="dashboard.php?section=opinions" class="clear-search-btn">
-                        <i class="fas fa-times"></i>
-                        <span class="translatable" data-key="clear">Clear</span>
-                    </a>
+                    <a href="dashboard.php?section=opinions" class="clear-search-btn"><i class="fas fa-times"></i> Clear</a>
                     <?php endif; ?>
                 </form>
             </div>
-            
+
             <?php if (!empty($opinions_search)): ?>
             <div class="search-results-info fade-in">
-                <div>
-                    <span class="translatable" data-key="search_results_for">Search results for:</span>
-                    <span class="search-term">"<?php echo htmlspecialchars($opinions_search); ?>"</span>
-                    <span class="translatable" data-key="found">found</span>
-                    <strong><?php echo $total_opinions_count; ?></strong>
-                    <span class="translatable" data-key="results">results</span>
-                </div>
+                <div>Search results for: <span class="search-term">"<?php echo htmlspecialchars($opinions_search); ?>"</span> - found <strong><?php echo $total_opinions_count; ?></strong> results</div>
             </div>
             <?php endif; ?>
-            
+
             <div class="table-container">
                 <table class="data-table">
                     <thead>
                         <tr>
-                            <th class="translatable" data-key="sr_no">SR. NO.</th>
-                            <th class="translatable" data-key="name">NAME</th>
-                            <th class="translatable" data-key="email">EMAIL</th>
-                            <th class="translatable" data-key="phone">PHONE</th>
-                            <th class="translatable" data-key="category">CATEGORY</th>
-                            <th class="translatable" data-key="date">DATE</th>
-                            <th class="translatable" data-key="action">ACTION</th>
+                            <th>SR. NO.</th>
+                            <th>NAME</th>
+                            <th>EMAIL</th>
+                            <th>PHONE</th>
+                            <th>CATEGORY</th>
+                            <th>DATE</th>
+                            <th>ACTION</th>
                         </tr>
                     </thead>
-                    <tbody id="opinionsTableBody">
+                    <tbody>
                         <?php
                         $count = 1;
                         while ($opinion = $opinions_result->fetch_assoc()):
@@ -639,26 +482,18 @@ $current_language = isset($_SESSION['dashboard_language']) ? $_SESSION['dashboar
                             <td><?php echo date('d M Y', strtotime($opinion['submission_date'])); ?></td>
                             <td>
                                 <button class="action-btn btn-view" onclick="viewOpinion(<?php echo $opinion['id']; ?>)">
-                                    <i class="fas fa-eye"></i> <span class="translatable" data-key="view">View</span>
+                                    <i class="fas fa-eye"></i> View
                                 </button>
                             </td>
                         </tr>
-                        <?php 
-                        $count++;
-                        endwhile; 
-                        
-                        if ($opinions_result->num_rows == 0):
-                        ?>
+                        <?php $count++; endwhile;
+                        if ($opinions_result->num_rows == 0): ?>
                         <tr>
                             <td colspan="7" style="text-align: center; padding: 40px; color: #666;">
                                 <i class="far fa-comment-dots fa-2x mb-3" style="color: #ddd;"></i>
-                                <div class="translatable" data-key="no_opinions_found">No opinions found</div>
+                                <div>No opinions found</div>
                                 <?php if (!empty($opinions_search)): ?>
-                                <div class="mt-2">
-                                    <a href="dashboard.php?section=opinions" class="translatable" data-key="clear_search_and_show_all" style="color: var(--accent-teal); text-decoration: none;">
-                                        Clear search and show all opinions
-                                    </a>
-                                </div>
+                                <div class="mt-2"><a href="dashboard.php?section=opinions" style="color: var(--accent-teal); text-decoration: none;">Clear search and show all opinions</a></div>
                                 <?php endif; ?>
                             </td>
                         </tr>
@@ -666,50 +501,32 @@ $current_language = isset($_SESSION['dashboard_language']) ? $_SESSION['dashboar
                     </tbody>
                 </table>
             </div>
-            
+
             <div class="pagination-container">
-                <div class="pagination-info" id="opinionsPaginationInfo">
-                    <span class="translatable" data-key="showing">Showing</span> <?php echo min($total_opinions_count, $opinions_offset + 1); ?>-<?php echo min($total_opinions_count, $opinions_offset + $opinions_per_page); ?> <span class="translatable" data-key="of">of</span> <?php echo $total_opinions_count; ?>
-                </div>
+                <div class="pagination-info">Showing <?php echo min($total_opinions_count, $opinions_offset + 1); ?>-<?php echo min($total_opinions_count, $opinions_offset + $opinions_per_page); ?> of <?php echo $total_opinions_count; ?></div>
                 <div class="pagination-buttons">
-                    <a class="page-btn translatable" data-key="previous" <?php echo $opinions_page <= 1 ? 'disabled' : ''; ?> 
-                       href="dashboard.php?section=opinions&opinions_page=<?php echo $opinions_page - 1; ?><?php echo !empty($opinions_search) ? '&opinions_search=' . urlencode($opinions_search) : ''; ?>" 
-                       <?php echo $opinions_page <= 1 ? 'disabled' : ''; ?>>
-                        Previous
-                    </a>
-                    
+                    <a class="page-btn" <?php echo $opinions_page <= 1 ? 'disabled' : ''; ?> href="dashboard.php?section=opinions&opinions_page=<?php echo $opinions_page - 1; ?><?php echo !empty($opinions_search) ? '&opinions_search=' . urlencode($opinions_search) : ''; ?>">Previous</a>
                     <?php for ($i = 1; $i <= min(4, $total_opinions_pages); $i++): ?>
-                    <a class="page-btn <?php echo $opinions_page == $i ? 'active' : ''; ?>" 
-                       href="dashboard.php?section=opinions&opinions_page=<?php echo $i; ?><?php echo !empty($opinions_search) ? '&opinions_search=' . urlencode($opinions_search) : ''; ?>">
-                        <?php echo $i; ?>
-                    </a>
+                    <a class="page-btn <?php echo $opinions_page == $i ? 'active' : ''; ?>" href="dashboard.php?section=opinions&opinions_page=<?php echo $i; ?><?php echo !empty($opinions_search) ? '&opinions_search=' . urlencode($opinions_search) : ''; ?>"><?php echo $i; ?></a>
                     <?php endfor; ?>
-                    
-                    <?php if ($total_opinions_pages > 4): ?>
-                    <span class="page-btn disabled">...</span>
-                    <?php endif; ?>
-                    
-                    <a class="page-btn translatable" data-key="next" <?php echo $opinions_page >= $total_opinions_pages ? 'disabled' : ''; ?> 
-                       href="dashboard.php?section=opinions&opinions_page=<?php echo $opinions_page + 1; ?><?php echo !empty($opinions_search) ? '&opinions_search=' . urlencode($opinions_search) : ''; ?>" 
-                       <?php echo $opinions_page >= $total_opinions_pages ? 'disabled' : ''; ?>>
-                        Next
-                    </a>
+                    <?php if ($total_opinions_pages > 4): ?><span class="page-btn disabled">...</span><?php endif; ?>
+                    <a class="page-btn" <?php echo $opinions_page >= $total_opinions_pages ? 'disabled' : ''; ?> href="dashboard.php?section=opinions&opinions_page=<?php echo $opinions_page + 1; ?><?php echo !empty($opinions_search) ? '&opinions_search=' . urlencode($opinions_search) : ''; ?>">Next</a>
                 </div>
             </div>
         </div>
-        
+
         <?php elseif ($section === 'admin_users'): ?>
         <!-- Admin Users Section -->
-        <div class="content-section fade-in" id="adminUsersSection">
+        <div class="content-section fade-in">
             <div class="section-header">
-                <h2 class="section-title"><i class="fas fa-user-shield"></i> <span class="translatable" data-key="admin_users">Admin Users</span></h2>
+                <h2 class="section-title"><i class="fas fa-user-shield"></i> Admin Users</h2>
                 <button class="action-btn btn-create-admin" data-bs-toggle="modal" data-bs-target="#createAdminModal">
-                    <i class="fas fa-user-plus"></i> <span class="translatable" data-key="create_admin">Create Admin User</span>
+                    <i class="fas fa-user-plus"></i> Create Admin User
                 </button>
             </div>
-            
-            <div class="admin-users-container" id="adminUsersContainer">
-                <?php while ($admin_user = $admin_users_result->fetch_assoc()): 
+
+            <div class="admin-users-container">
+                <?php while ($admin_user = $admin_users_result->fetch_assoc()):
                     $role_label = ucfirst(str_replace('_', ' ', $admin_user['role']));
                     $status_color = $admin_user['status'] == 'active' ? 'var(--success-color)' : '#e74c3c';
                 ?>
@@ -723,124 +540,121 @@ $current_language = isset($_SESSION['dashboard_language']) ? $_SESSION['dashboar
                     </div>
                     <div class="admin-user-details">
                         <div class="detail-item">
-                            <label class="translatable" data-key="role">Role</label>
+                            <label>Role</label>
                             <div class="value"><?php echo $role_label; ?></div>
                         </div>
                         <div class="detail-item">
-                            <label class="translatable" data-key="email">Email</label>
+                            <label>Email</label>
                             <div class="value"><?php echo htmlspecialchars($admin_user['email']); ?></div>
                         </div>
                         <div class="detail-item">
-                            <label class="translatable" data-key="created">Created</label>
+                            <label>Created</label>
                             <div class="value"><?php echo $admin_user['created_by'] ? 'By ' . htmlspecialchars($admin_user['created_by']) : 'System'; ?></div>
                         </div>
                         <div class="detail-item">
-                            <label class="translatable" data-key="status">Status</label>
+                            <label>Status</label>
                             <div class="value" style="color: <?php echo $status_color; ?>;"><?php echo ucfirst($admin_user['status']); ?></div>
                         </div>
                     </div>
                 </div>
                 <?php endwhile; ?>
             </div>
-            
+
             <div class="pagination-container">
-                <div class="pagination-info" id="adminUsersPaginationInfo">
-                    <span class="translatable" data-key="showing">Showing</span> 1-<?php echo $admin_users_result->num_rows; ?> <span class="translatable" data-key="of">of</span> <?php echo $admin_users_result->num_rows; ?>
-                </div>
+                <div class="pagination-info">Showing all admin users</div>
             </div>
         </div>
         <?php endif; ?>
     </div>
-    
+
     <!-- Opinion Detail Modal -->
     <div class="modal fade" id="opinionDetailModal" tabindex="-1" aria-labelledby="opinionDetailModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered modal-lg">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title"><i class="far fa-comment-dots me-2"></i><span class="translatable" data-key="opinion_details">Opinion Details</span></h5>
+                    <h5 class="modal-title"><i class="far fa-comment-dots me-2"></i>Opinion Details</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body" id="opinionDetailBody">
-                    <!-- Opinion details will be loaded here via JavaScript -->
                 </div>
             </div>
         </div>
     </div>
-    
+
     <!-- Change Password Modal -->
     <div class="modal fade" id="changePasswordModal" tabindex="-1" aria-labelledby="changePasswordModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title"><i class="fas fa-key me-2"></i><span class="translatable" data-key="change_password">Change Password</span></h5>
+                    <h5 class="modal-title"><i class="fas fa-key me-2"></i>Change Password</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
                     <form id="changePasswordForm" method="POST">
                         <input type="hidden" name="action" value="change_password">
                         <div class="mb-3">
-                            <label for="currentPassword" class="form-label"><span class="translatable" data-key="current_password">Current Password</span></label>
-                            <input type="password" class="form-control" id="currentPassword" name="current_password" placeholder="<?php echo htmlspecialchars(translatePlaceholder('Enter current password', $current_language)); ?>" required>
+                            <label for="currentPassword" class="form-label">Current Password</label>
+                            <input type="password" class="form-control" id="currentPassword" name="current_password" placeholder="Enter current password" required>
                         </div>
                         <div class="mb-3">
-                            <label for="newPassword" class="form-label"><span class="translatable" data-key="new_password">New Password</span></label>
-                            <input type="password" class="form-control" id="newPassword" name="new_password" placeholder="<?php echo htmlspecialchars(translatePlaceholder('Enter new password', $current_language)); ?>" required>
+                            <label for="newPassword" class="form-label">New Password</label>
+                            <input type="password" class="form-control" id="newPassword" name="new_password" placeholder="Enter new password" required>
                         </div>
                         <div class="mb-3">
-                            <label for="confirmPassword" class="form-label"><span class="translatable" data-key="confirm_password">Confirm New Password</span></label>
-                            <input type="password" class="form-control" id="confirmPassword" name="confirm_password" placeholder="<?php echo htmlspecialchars(translatePlaceholder('Confirm new password', $current_language)); ?>" required>
+                            <label for="confirmPassword" class="form-label">Confirm New Password</label>
+                            <input type="password" class="form-control" id="confirmPassword" name="confirm_password" placeholder="Confirm new password" required>
                         </div>
                         <button type="submit" class="btn-submit">
-                            <i class="fas fa-key me-2"></i><span class="translatable" data-key="change_password_btn">Change Password</span>
+                            <i class="fas fa-key me-2"></i>Change Password
                         </button>
                     </form>
                 </div>
             </div>
         </div>
     </div>
-    
+
     <!-- Create Admin User Modal -->
     <div class="modal fade" id="createAdminModal" tabindex="-1" aria-labelledby="createAdminModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title"><i class="fas fa-user-plus me-2"></i><span class="translatable" data-key="create_admin_user">Create Admin User</span></h5>
+                    <h5 class="modal-title"><i class="fas fa-user-plus me-2"></i>Create Admin User</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
                     <form id="createAdminForm" method="POST">
                         <input type="hidden" name="action" value="create_admin">
                         <div class="mb-3">
-                            <label for="adminUsername" class="form-label"><span class="translatable" data-key="username">Username</span></label>
-                            <input type="text" class="form-control" id="adminUsername" name="username" placeholder="<?php echo htmlspecialchars(translatePlaceholder('Enter username', $current_language)); ?>" required>
+                            <label for="adminUsername" class="form-label">Username</label>
+                            <input type="text" class="form-control" id="adminUsername" name="username" placeholder="Enter username" required>
                         </div>
                         <div class="mb-3">
-                            <label for="adminEmail" class="form-label"><span class="translatable" data-key="email_address">Email Address</span></label>
+                            <label for="adminEmail" class="form-label">Email Address</label>
                             <input type="email" class="form-control" id="adminEmail" name="email" placeholder="admin@example.com" required>
                         </div>
                         <div class="mb-3">
-                            <label for="adminFullName" class="form-label"><span class="translatable" data-key="full_name">Full Name</span></label>
-                            <input type="text" class="form-control" id="adminFullName" name="full_name" placeholder="<?php echo htmlspecialchars(translatePlaceholder('Enter full name', $current_language)); ?>" required>
+                            <label for="adminFullName" class="form-label">Full Name</label>
+                            <input type="text" class="form-control" id="adminFullName" name="full_name" placeholder="Enter full name" required>
                         </div>
                         <div class="mb-3">
-                            <label for="adminPassword" class="form-label"><span class="translatable" data-key="password">Password</span></label>
-                            <input type="password" class="form-control" id="adminPassword" name="password" placeholder="<?php echo htmlspecialchars(translatePlaceholder('Enter password', $current_language)); ?>" required>
-                            <div class="form-text translatable" data-key="password_hint">Password must be at least 6 characters long</div>
+                            <label for="adminPassword" class="form-label">Password</label>
+                            <input type="password" class="form-control" id="adminPassword" name="password" placeholder="Enter password" required>
+                            <div class="form-text">Password must be at least 6 characters long</div>
                         </div>
                         <div class="mb-3">
-                            <label for="adminConfirmPassword" class="form-label"><span class="translatable" data-key="confirm_password">Confirm Password</span></label>
-                            <input type="password" class="form-control" id="adminConfirmPassword" name="confirm_password" placeholder="<?php echo htmlspecialchars(translatePlaceholder('Confirm password', $current_language)); ?>" required>
+                            <label for="adminConfirmPassword" class="form-label">Confirm Password</label>
+                            <input type="password" class="form-control" id="adminConfirmPassword" name="confirm_password" placeholder="Confirm password" required>
                         </div>
                         <div class="mb-3">
-                            <label for="adminRole" class="form-label"><span class="translatable" data-key="role">Role</span></label>
+                            <label for="adminRole" class="form-label">Role</label>
                             <select class="form-control" id="adminRole" name="role" required>
-                                <option value="admin" class="translatable" data-key="administrator">Administrator</option>
-                                <option value="moderator" class="translatable" data-key="moderator">Moderator</option>
-                                <option value="viewer" class="translatable" data-key="viewer">Viewer</option>
+                                <option value="admin">Administrator</option>
+                                <option value="moderator">Moderator</option>
+                                <option value="viewer">Viewer</option>
                             </select>
                         </div>
                         <button type="submit" class="btn-submit">
-                            <i class="fas fa-user-plus me-2"></i><span class="translatable" data-key="create_admin_user_btn">Create Admin User</span>
+                            <i class="fas fa-user-plus me-2"></i>Create Admin User
                         </button>
                     </form>
                 </div>
@@ -850,75 +664,293 @@ $current_language = isset($_SESSION['dashboard_language']) ? $_SESSION['dashboar
 
     <!-- Bootstrap JS Bundle with Popper -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
-    
-    <script src="assets/js/dashboard.js">
-        // Translation configuration
-       
+    <script src="assets/js/dashboard.js"></script>
+
+    <!-- Custom Language Selector (powered by Google Translate) -->
+    <div class="gt-widget" id="gtWidget">
+        <div class="gt-toggle" id="gtToggle" onclick="toggleGTDropdown(event)">
+            <i class="fas fa-globe gt-icon"></i>
+            <span class="gt-current" id="gtCurrentLang">Hindi</span>
+            <i class="fas fa-chevron-down gt-arrow" id="gtArrow"></i>
+        </div>
+        <div class="gt-dropdown" id="gtDropdown">
+            <div class="gt-dropdown-header">Select Language</div>
+            <div class="gt-options" id="gtOptions"></div>
+        </div>
+        <div id="google_translate_element" style="display:none !important;height:0 !important;overflow:hidden !important;"></div>
+    </div>
+
+    <script type="text/javascript">
+        // Language list
+        var gtLanguages = [
+            {code:'en', name:'English'},
+            {code:'hi', name:'Hindi'},
+            {code:'bn', name:'Bengali'},
+            {code:'ta', name:'Tamil'},
+            {code:'te', name:'Telugu'},
+            {code:'mr', name:'Marathi'},
+            {code:'gu', name:'Gujarati'},
+            {code:'kn', name:'Kannada'},
+            {code:'ml', name:'Malayalam'},
+            {code:'or', name:'Odia'},
+            {code:'pa', name:'Punjabi'},
+            {code:'as', name:'Assamese'},
+            {code:'ur', name:'Urdu'},
+            {code:'ne', name:'Nepali'},
+            {code:'sd', name:'Sindhi'},
+            {code:'fr', name:'French'},
+            {code:'es', name:'Spanish'},
+            {code:'ar', name:'Arabic'},
+            {code:'zh-CN', name:'Chinese'},
+            {code:'ru', name:'Russian'},
+            {code:'de', name:'German'},
+            {code:'ja', name:'Japanese'},
+            {code:'pt', name:'Portuguese'}
+        ];
+
+        // Set Hindi as default language on first visit
+        (function() {
+            var match = document.cookie.match(/googtrans=([^;]*)/);
+            if (!match || !match[1] || match[1] === '') {
+                document.cookie = "googtrans=/en/hi; path=/";
+                document.cookie = "googtrans=/en/hi; path=/; domain=." + location.hostname;
+            }
+        })();
+
+        // Detect current language from cookie
+        function getCurrentLang() {
+            var match = document.cookie.match(/googtrans=\/en\/([^;]*)/);
+            return match ? match[1] : 'hi';
+        }
+
+        // Build the custom dropdown options
+        function buildGTDropdown() {
+            var container = document.getElementById('gtOptions');
+            var currentLang = getCurrentLang();
+            var html = '';
+            gtLanguages.forEach(function(lang) {
+                var isActive = lang.code === currentLang;
+                html += '<div class="gt-option' + (isActive ? ' active' : '') + '" data-lang="' + lang.code + '" onclick="selectLanguage(\'' + lang.code + '\')">' +
+                    '<span class="gt-option-name">' + lang.name + '</span>' +
+                    (isActive ? '<i class="fas fa-check"></i>' : '') +
+                '</div>';
+            });
+            container.innerHTML = html;
+
+            var current = gtLanguages.find(function(l) { return l.code === currentLang; });
+            if (current) {
+                document.getElementById('gtCurrentLang').textContent = current.name;
+            }
+        }
+
+        // Toggle dropdown with timing guard
+        var gtLastToggle = 0;
+        function toggleGTDropdown(e) {
+            e.stopPropagation();
+            e.preventDefault();
+            gtLastToggle = Date.now();
+            var dropdown = document.getElementById('gtDropdown');
+            var arrow = document.getElementById('gtArrow');
+            dropdown.classList.toggle('show');
+            arrow.classList.toggle('open');
+        }
+
+        // Select a language - programmatically trigger Google Translate
+        function selectLanguage(langCode) {
+            gtLastToggle = Date.now();
+            var combo = document.querySelector('.goog-te-combo');
+            if (combo) {
+                combo.value = langCode;
+                combo.dispatchEvent(new Event('change'));
+            } else {
+                document.cookie = "googtrans=/en/" + langCode + "; path=/";
+                document.cookie = "googtrans=/en/" + langCode + "; path=/; domain=." + location.hostname;
+                location.reload();
+            }
+
+            var langObj = gtLanguages.find(function(l) { return l.code === langCode; });
+            if (langObj) {
+                document.getElementById('gtCurrentLang').textContent = langObj.name;
+            }
+            document.getElementById('gtDropdown').classList.remove('show');
+            document.getElementById('gtArrow').classList.remove('open');
+            setTimeout(function() { buildGTDropdown(); }, 100);
+        }
+
+        // Close dropdown when clicking outside (with timing guard)
+        document.addEventListener('click', function(e) {
+            if (Date.now() - gtLastToggle < 400) return;
+            var widget = document.getElementById('gtWidget');
+            if (widget && !widget.contains(e.target)) {
+                document.getElementById('gtDropdown').classList.remove('show');
+                document.getElementById('gtArrow').classList.remove('open');
+            }
+        });
+
+        // Google Translate init (hidden, only used as engine)
+        function googleTranslateElementInit() {
+            new google.translate.TranslateElement({
+                pageLanguage: 'en',
+                includedLanguages: 'hi,bn,ta,te,mr,gu,kn,ml,or,pa,as,ur,ne,sd,en,fr,es,ar,zh-CN,ru,de,ja,pt',
+                layout: google.translate.TranslateElement.InlineLayout.SIMPLE,
+                autoDisplay: false
+            }, 'google_translate_element');
+        }
+
+        // Hide ALL Google Translate UI (we use our own custom dropdown)
+        function hideAllGTUI() {
+            var kids = document.body.children;
+            for (var i = 0; i < kids.length; i++) {
+                if (kids[i].classList && kids[i].classList.contains('skiptranslate') && kids[i].id !== 'gtWidget') {
+                    kids[i].style.setProperty('display', 'none', 'important');
+                    kids[i].style.setProperty('height', '0', 'important');
+                }
+            }
+            document.querySelectorAll('.goog-te-banner-frame, .VIpgJd-ZVi9od-ORHb-OEVmcd, #goog-gt-tt').forEach(function(el) {
+                el.style.setProperty('display', 'none', 'important');
+            });
+            document.body.style.setProperty('top', '0px', 'important');
+        }
+        setInterval(hideAllGTUI, 100);
+
+        document.addEventListener('DOMContentLoaded', buildGTDropdown);
     </script>
+    <script type="text/javascript" src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
+
+    <style>
+        /* Custom Language Widget */
+        .gt-widget {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 9999;
+            font-family: 'Inter', sans-serif;
+        }
+        .gt-toggle {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: #fff;
+            padding: 12px 20px;
+            border-radius: 50px;
+            cursor: pointer;
+            box-shadow: 0 4px 24px rgba(6, 30, 41, 0.10), 0 1px 4px rgba(6, 30, 41, 0.06);
+            border: 1.5px solid rgba(95, 149, 152, 0.15);
+            transition: all 0.3s ease;
+            user-select: none;
+        }
+        .gt-toggle:hover {
+            box-shadow: 0 8px 32px rgba(6, 30, 41, 0.16);
+            transform: translateY(-2px);
+            border-color: rgba(95, 149, 152, 0.35);
+        }
+        .gt-toggle:active {
+            transform: translateY(0);
+        }
+        .gt-icon {
+            color: #5f9598;
+            font-size: 1.1rem;
+        }
+        .gt-current {
+            font-weight: 600;
+            font-size: 0.9rem;
+            color: #1d546d;
+        }
+        .gt-arrow {
+            font-size: 0.65rem;
+            color: #999;
+            transition: transform 0.3s ease;
+            margin-left: 2px;
+        }
+        .gt-arrow.open {
+            transform: rotate(180deg);
+        }
+        .gt-dropdown {
+            position: absolute;
+            bottom: calc(100% + 10px);
+            right: 0;
+            width: 230px;
+            max-height: 340px;
+            background: #fff;
+            border-radius: 16px;
+            box-shadow: 0 16px 48px rgba(6, 30, 41, 0.16), 0 2px 8px rgba(6, 30, 41, 0.06);
+            border: 1px solid rgba(95, 149, 152, 0.1);
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(8px) scale(0.97);
+            transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+            overflow: hidden;
+        }
+        .gt-dropdown.show {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0) scale(1);
+        }
+        .gt-dropdown-header {
+            padding: 14px 18px 10px;
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1.2px;
+            color: #5f9598;
+            border-bottom: 1px solid rgba(95, 149, 152, 0.1);
+        }
+        .gt-options {
+            max-height: 280px;
+            overflow-y: auto;
+            padding: 6px 0;
+        }
+        .gt-option {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 11px 18px;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            font-size: 0.88rem;
+            color: #444;
+        }
+        .gt-option:hover {
+            background: rgba(95, 149, 152, 0.08);
+            color: #1d546d;
+        }
+        .gt-option.active {
+            color: #1d546d;
+            font-weight: 700;
+            background: rgba(95, 149, 152, 0.06);
+        }
+        .gt-option .fa-check {
+            color: #5f9598;
+            font-size: 0.7rem;
+        }
+        .gt-options::-webkit-scrollbar {
+            width: 4px;
+        }
+        .gt-options::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .gt-options::-webkit-scrollbar-thumb {
+            background: rgba(95, 149, 152, 0.2);
+            border-radius: 10px;
+        }
+        /* Hide ALL Google Translate UI */
+        body > .skiptranslate {
+            display: none !important;
+            height: 0 !important;
+            overflow: hidden !important;
+        }
+        .goog-te-banner-frame {
+            display: none !important;
+        }
+        #goog-gt-tt {
+            display: none !important;
+        }
+        #google_translate_element {
+            display: none !important;
+        }
+        body {
+            top: 0px !important;
+        }
+    </style>
 </body>
 </html>
-
-<?php
-// Helper function for server-side placeholder translation (optional)
-function translatePlaceholder($text, $language) {
-    // Simple placeholder translations - in production, use a proper translation system
-    $translations = [
-        'en' => [
-            'Enter current password' => 'Enter current password',
-            'Enter new password' => 'Enter new password',
-            'Confirm new password' => 'Confirm new password',
-            'Enter username' => 'Enter username',
-            'Enter full name' => 'Enter full name',
-            'Enter password' => 'Enter password',
-            'Confirm password' => 'Confirm password',
-            'Search members by name, email or phone...' => 'Search members by name, email or phone...',
-            'Search opinions by name, email, phone, category or content...' => 'Search opinions by name, email, phone, category or content...',
-            'Search results for:' => 'Search results for:',
-            'found' => 'found',
-            'results' => 'results',
-            'Clear search and show all members' => 'Clear search and show all members',
-            'Clear search and show all opinions' => 'Clear search and show all opinions',
-            'No members found' => 'No members found',
-            'No opinions found' => 'No opinions found'
-        ],
-        'hi' => [
-            'Enter current password' => 'वर्तमान पासवर्ड दर्ज करें',
-            'Enter new password' => 'नया पासवर्ड दर्ज करें',
-            'Confirm new password' => 'नए पासवर्ड की पुष्टि करें',
-            'Enter username' => 'उपयोगकर्ता नाम दर्ज करें',
-            'Enter full name' => 'पूरा नाम दर्ज करें',
-            'Enter password' => 'पासवर्ड दर्ज करें',
-            'Confirm password' => 'पासवर्ड की पुष्टि करें',
-            'Search members by name, email or phone...' => 'नाम, ईमेल या फोन से सदस्य खोजें...',
-            'Search opinions by name, email, phone, category or content...' => 'नाम, ईमेल, फोन, श्रेणी या विषय से राय खोजें...',
-            'Search results for:' => 'खोज परिणाम:',
-            'found' => 'पाए गए',
-            'results' => 'परिणाम',
-            'Clear search and show all members' => 'खोज साफ करें और सभी सदस्य दिखाएं',
-            'Clear search and show all opinions' => 'खोज साफ करें और सभी राय दिखाएं',
-            'No members found' => 'कोई सदस्य नहीं मिला',
-            'No opinions found' => 'कोई राय नहीं मिली'
-        ],
-        'es' => [
-            'Enter current password' => 'Ingrese la contraseña actual',
-            'Enter new password' => 'Ingrese nueva contraseña',
-            'Confirm new password' => 'Confirmar nueva contraseña',
-            'Enter username' => 'Ingrese nombre de usuario',
-            'Enter full name' => 'Ingrese nombre completo',
-            'Enter password' => 'Ingrese contraseña',
-            'Confirm password' => 'Confirmar contraseña',
-            'Search members by name, email or phone...' => 'Buscar miembros por nombre, email o teléfono...',
-            'Search opinions by name, email, phone, category or content...' => 'Buscar opiniones por nombre, email, teléfono, categoría o contenido...',
-            'Search results for:' => 'Resultados de búsqueda para:',
-            'found' => 'encontrados',
-            'results' => 'resultados',
-            'Clear search and show all members' => 'Limpiar búsqueda y mostrar todos los miembros',
-            'Clear search and show all opinions' => 'Limpiar búsqueda y mostrar todas las opiniones',
-            'No members found' => 'No se encontraron miembros',
-            'No opinions found' => 'No se encontraron opiniones'
-        ] 
-        
-    ];
-    
-    return isset($translations[$language][$text]) ? $translations[$language][$text] : $text;
-}
