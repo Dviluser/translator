@@ -2,16 +2,7 @@
 require_once 'config/database.php';
 
 // Get content from JSON file
-$contentJson = file_get_contents('assets/data/content.json');
-$translations = json_decode($contentJson, true);
 
-// Set default language
-$currentLang = isset($_GET['lang']) ? $_GET['lang'] : 'hi';
-if (!array_key_exists($currentLang, $translations)) {
-    $currentLang = 'hi';
-}
-
-$t = $translations[$currentLang];
 
 // Handle form submissions
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -123,7 +114,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 ?>
 
 <!DOCTYPE html>
-<html lang="<?php echo $currentLang; ?>" dir="ltr">
+<html lang="en" dir="ltr">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -167,17 +158,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <div class="row align-items-center">
                 <div class="col-md-5 col-lg-4">
                     <a href="index.php" class="logo">
-                        <span id="logoText"><?php echo $currentLang === 'en' ? 'Sarvatantra' : 'सर्वतंत्र'; ?></span>
+                        <span id="logoText">Sarvatantra</span>
                     </a>
                 </div>
                 <div class="col-md-7 col-lg-8 text-md-end">
                     <div class="d-flex justify-content-md-end align-items-center flex-wrap">
-                        <div class="language-switcher me-3">
-                            <i class="fas fa-globe" style="color: var(--accent-teal);"></i>
-                            <select id="languageSelect" class="form-select" onchange="changeLanguage(this.value)">
-                                <option value="hi" <?php echo $currentLang === 'hi' ? 'selected' : ''; ?>>हिन्दी</option>
-                                <option value="en" <?php echo $currentLang === 'en' ? 'selected' : ''; ?>>English</option>
-                                <option value="bn" <?php echo $currentLang === 'bn' ? 'selected' : ''; ?>>বাংলা</option>
+                        <!-- Language switcher removed -->
                                 <option value="ta" <?php echo $currentLang === 'ta' ? 'selected' : ''; ?>>தமிழ்</option>
                                 <option value="te" <?php echo $currentLang === 'te' ? 'selected' : ''; ?>>తెలుగు</option>
                                 <option value="mr" <?php echo $currentLang === 'mr' ? 'selected' : ''; ?>>मराठी</option>
@@ -555,5 +541,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // OpenRouter API configuration
         
     </script>
+</script>
+
+        <!-- Google Translate Widget -->
+        <div id="google_translate_element" style="position:fixed;bottom:10px;right:10px;z-index:9999;"></div>
+        <script type="text/javascript">
+            function googleTranslateElementInit() {
+                new google.translate.TranslateElement({
+                    pageLanguage: 'en',
+                    includedLanguages: 'en,hi,fr,es,ar,zh-CN,ru,de,ja,pt', // Add/remove languages as needed
+                    layout: google.translate.TranslateElement.InlineLayout.SIMPLE
+                }, 'google_translate_element');
+            }
+        </script>
+        <script type="text/javascript" src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
 </body>
 </html>
