@@ -39,35 +39,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'login
     $username = trim($_POST['username'] ?? '');
     $password = $_POST['password'] ?? '';
 
-    if (!empty($username) && !empty($password)) {
+    // Hardcoded default admin credentials
+    $default_admin_user = 'admin@admin.com';
+    $default_admin_pass = 'admin123';
 
-        $stmt = $conn->prepare("SELECT * FROM admin_users WHERE email = ? AND status = 'active' LIMIT 1");
-        $stmt->bind_param("s", $username);
-        $stmt->execute();
-        $result = $stmt->get_result();
+    if ($username === $default_admin_user && $password === $default_admin_pass) {
+        
+        $_SESSION['admin_id'] = 1;
+        $_SESSION['admin_username'] = 'admin';
+        $_SESSION['admin_email'] = $default_admin_user;
+        $_SESSION['admin_role'] = 'superadmin';
+        $_SESSION['admin_name'] = 'Administrator';
 
-        if ($result && $result->num_rows === 1) {
-            $admin = $result->fetch_assoc();
+        $_SESSION['success_message'] = trans('login_success', 'Login successful');
 
-            if (password_verify($password, $admin['password'])) {
-
-                $_SESSION['admin_id'] = $admin['id'];
-                $_SESSION['admin_username'] = $admin['username'];
-                $_SESSION['admin_email'] = $admin['email'];
-                $_SESSION['admin_role'] = $admin['role'];
-                $_SESSION['admin_name'] = $admin['full_name'];
-
-                $_SESSION['success_message'] = trans('login_success', 'Login successful');
-
-                header("Location: dashboard.php");
-                exit;
-            }
-        }
+        header("Location: dashboard.php");
+        exit;
+        
+    } else {
+        $_SESSION['error_message'] = trans('login_error', 'Invalid login credentials');
+        header("Location: admin_login.php?lang=" . urlencode($currentLang));
+        exit;
     }
-
-    $_SESSION['error_message'] = trans('login_error', 'Invalid login credentials');
-    header("Location: admin_login.php?lang=" . urlencode($currentLang));
-    exit;
 }
 
 /* -------------------- ALREADY LOGGED IN -------------------- */
