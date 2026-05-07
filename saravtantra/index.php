@@ -42,7 +42,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
 
                 $wordCount = str_word_count($opinion);
-                if ($wordCount > 20) {
+                if ($wordCount > 40) {
                     $_SESSION['error_message'] = 'Opinion should be maximum 20 words.';
                     header("Location: index.php");
                     exit;
@@ -273,7 +273,7 @@ if ($page < 1 || $page > 5) {
                                     <i class="fas fa-envelope"></i>
                                     <span>Email Address *</span>
                                 </label>
-                                <input type="email" class="form-control" id="joinEmail" name="email" placeholder="name@example.com" required>
+                                <input type="email" class="form-control" id="joinEmail" name="email" placeholder="name@example.com">
                             </div>
                             <div class="mb-4">
                                 <label for="joinPhone" class="form-label">
@@ -344,19 +344,19 @@ if ($page < 1 || $page > 5) {
                             <input type="text" class="form-control" id="userName" name="name" placeholder="Enter your name" required>
                         </div>
                         <div class="mb-3">
-                            <label for="userEmail" class="form-label">Email Address *</label>
-                            <input type="email" class="form-control" id="userEmail" name="email" placeholder="name@example.com" required>
+                            <label for="userEmail" class="form-label">Email Address </label>
+                            <input type="email" class="form-control" id="userEmail" name="email" placeholder="name@example.com">
                         </div>
                         <div class="mb-3">
                             <label for="userPhone" class="form-label">Phone Number</label>
-                            <input type="tel" class="form-control" id="userPhone" name="phone" placeholder="9876543210" maxlength="10" pattern="[0-9]{10}">
+                            <input type="tel" class="form-control" id="userPhone" name="phone" required placeholder="9876543210" maxlength="10" pattern="[0-9]{10}">
                             <div class="phone-validation" id="opinionPhoneValidation">Enter a valid 10-digit mobile number</div>
                         </div>
                         <div class="mb-4">
                             <label for="userOpinion" class="form-label">Your Opinion *</label>
                             <textarea class="form-control" id="userOpinion" name="opinion" rows="4" placeholder="Please share your opinion in detail..." required maxlength="500"></textarea>
                             <div class="word-count-container">
-                                <div class="word-count" id="wordCount">Words: 0/20</div>
+                                <div class="word-count" id="wordCount">Words: 0/40</div>
                                 <div id="wordLimitMessage" style="font-size: 0.85rem; color: #666;"></div>
                             </div>
                         </div>
