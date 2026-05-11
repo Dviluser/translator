@@ -40,8 +40,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'login
     $password = $_POST['password'] ?? '';
 
     // Hardcoded default admin credentials
-    $default_admin_user = 'admin@admin.com';
-    $default_admin_pass = 'admin123';
+    $default_admin_user = 'taranandsingh9@gmail.com';
+    $default_admin_pass = 'taranandsingh@1326';
 
     if ($username === $default_admin_user && $password === $default_admin_pass) {
         
