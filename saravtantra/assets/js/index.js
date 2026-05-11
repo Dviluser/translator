@@ -49,20 +49,20 @@ function updateWordCount() {
     if (!textarea || !wordCountElement) return;
 
     const wordCount = countWords(textarea.value);
-    wordCountElement.textContent = `Words: ${wordCount}/20`;
+    wordCountElement.textContent = `Words: ${wordCount}/40`;
 
-    if (wordCount > 20) {
+    if (wordCount > 40) {
         wordCountElement.classList.add('limit-reached');
         wordCountElement.classList.remove('warning', 'valid');
-        wordLimitMessage.textContent = 'Maximum 20 words allowed!';
+        wordLimitMessage.textContent = 'Maximum 40 words allowed!';
         wordLimitMessage.style.color = '#c0392b';
         submitBtn.disabled = true;
         submitBtn.style.opacity = '0.6';
         submitBtn.style.cursor = 'not-allowed';
-    } else if (wordCount > 15) {
+    } else if (wordCount > 35) {
         wordCountElement.classList.add('warning');
         wordCountElement.classList.remove('limit-reached', 'valid');
-        wordLimitMessage.textContent = `${20 - wordCount} words remaining`;
+        wordLimitMessage.textContent = `${40 - wordCount} words remaining`;
         wordLimitMessage.style.color = '#e74c3c';
         submitBtn.disabled = false;
         submitBtn.style.opacity = '1';
@@ -70,7 +70,7 @@ function updateWordCount() {
     } else {
         wordCountElement.classList.add('valid');
         wordCountElement.classList.remove('warning', 'limit-reached');
-        wordLimitMessage.textContent = wordCount === 0 ? 'Enter your opinion' : `${20 - wordCount} words remaining`;
+        wordLimitMessage.textContent = wordCount === 0 ? 'Enter your opinion' : `${40 - wordCount} words remaining`;
         wordLimitMessage.style.color = wordCount === 0 ? '#666' : '#27ae60';
         submitBtn.disabled = false;
         submitBtn.style.opacity = '1';
@@ -82,9 +82,9 @@ function validateOpinionForm(event) {
     const textarea = document.getElementById('userOpinion');
     const wordCount = countWords(textarea.value);
 
-    if (wordCount > 20) {
+    if (wordCount > 40) {
         event.preventDefault();
-        alert('Please limit your opinion to maximum 20 words. You have entered ' + wordCount + ' words.');
+        alert('Please limit your opinion to maximum 40 words. You have entered ' + wordCount + ' words.');
         textarea.focus();
         return false;
     }
