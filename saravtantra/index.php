@@ -271,7 +271,7 @@ if ($page < 1 || $page > 5) {
                             <div class="mb-4">
                                 <label for="joinEmail" class="form-label">
                                     <i class="fas fa-envelope"></i>
-                                    <span>Email Address *</span>
+                                    <span>Email Address (optional)</span>
                                 </label>
                                 <input type="email" class="form-control" id="joinEmail" name="email" placeholder="name@example.com">
                             </div>
@@ -344,11 +344,11 @@ if ($page < 1 || $page > 5) {
                             <input type="text" class="form-control" id="userName" name="name" placeholder="Enter your name" required>
                         </div>
                         <div class="mb-3">
-                            <label for="userEmail" class="form-label">Email Address </label>
+                            <label for="userEmail" class="form-label">Email Address (optional) </label>
                             <input type="email" class="form-control" id="userEmail" name="email" placeholder="name@example.com">
                         </div>
                         <div class="mb-3">
-                            <label for="userPhone" class="form-label">Phone Number</label>
+                            <label for="userPhone" class="form-label">Phone Number *</label>
                             <input type="tel" class="form-control" id="userPhone" name="phone" required placeholder="9876543210" maxlength="10" pattern="[0-9]{10}">
                             <div class="phone-validation" id="opinionPhoneValidation">Enter a valid 10-digit mobile number</div>
                         </div>
